@@ -12,12 +12,16 @@ public:
 	void stop();
 
 	void send(Packet packet);
-	void doCall(bool global);
+	void call(bool global);
 
 	// Properties
-	void setOpenHandler(std::function<bool()> handler);
-	void setCloseHandler(std::function<bool()> handler);
-	void setPacketHandler(std::function<bool(Packet*)> handler);
+	void setOpenHandler(std::function<bool(std::shared_ptr<Client>)> handler);
+	void setCloseHandler(std::function<bool(std::shared_ptr<Client>)> handler);
+	void setPacketHandler(std::function<bool(std::shared_ptr<Client>, Packet*)> handler);
+
+	int bellNo;
+	bool bellGlobal;
+	bool isRegistered;
 
 private:
 	void doReceive();
@@ -29,7 +33,7 @@ private:
 	PacketQueue sends_;
 
 	// Open/Close/Receive handlers
-	std::function<bool()> handleOpen;
-	std::function<bool()> handleClose;
-	std::function<bool(Packet*)> handlePacket;
+	std::function<bool(std::shared_ptr<Client>)> handleOpen;
+	std::function<bool(std::shared_ptr<Client>)> handleClose;
+	std::function<bool(std::shared_ptr<Client>, Packet*)> handlePacket;
 };

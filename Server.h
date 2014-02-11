@@ -17,12 +17,18 @@ public:
 	void start();
 	void stop();
 
+	bool call(int bellNo);
+	void callGlobal();
+
 	// Client handlers
 	bool handleOpen(std::shared_ptr<Client> client);
 	bool handleClose(std::shared_ptr<Client> client);
 	bool handlePacket(std::shared_ptr<Client> client, Packet* packet);
 
 private:
+	// All handlers we have
+	bool handleRegister(std::shared_ptr<Client> client, Packet* packet);
+
 	// Thread system
 	void run();
 	bool isRunning_;

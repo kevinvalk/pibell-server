@@ -2,6 +2,7 @@
 
 Server::Server()
 {
+
 }
 
 
@@ -26,6 +27,33 @@ void Server::stop()
 	thread_.join();
 }
 
+bool Server::call(int bellNo)
+{
+	try
+	{
+		for (auto client : bellClients_.at(bellNo))
+		{
+			client->call(false);
+		}
+		return true;
+	}
+	catch(std::out_of_range& e)
+	{
+		return false;
+	}
+}
+
+void Server::callGlobal()
+{
+	for (auto client : clients_)
+	{
+		if (client->isRegistered && client->bellGlobal)
+		{
+			client->call(true);
+		}
+	}
+}
+
 bool Server::handleOpen(std::shared_ptr<Client> client)
 {
 	std::cout << "Handle open" << std::endl;
@@ -41,9 +69,11 @@ bool Server::handleClose(std::shared_ptr<Client> client)
 	clients_.remove(client);
 
 	// Remove the client from registered bells
-	for (auto it = bellClients_.cbegin(); it != bellClients_.cend(); ++it)
+	for (auto& bellClient : bellClients_)
 	{
-		bellClients_.erase(it);
+		bellClient.second.remove(client);
+		if (bellClient.second.empty())
+			bellClients_.erase(bellClient.first);
 	}
 
 	return true;
@@ -53,18 +83,37 @@ bool Server::handlePacket(std::shared_ptr<Client> client, Packet* packet)
 {
 	switch (packet->getType())
 	{
-		case PacketType::CALL:
-			std::cout << "Call packet" << std::endl;
-		break;
-		case PacketType::REGISTER:
-			std::cout << "Register packet" << std::endl;
-		break;
+		case REGISTER: return handleRegister(client, packet);
 		default:
 			std::cout << "Received unhandeled packet with type: " << packet->getType() << std::endl;
-		break;
+			return false;
 	}
+}
 
-	return true;
+bool Server::handleRegister(std::shared_ptr<Client> client, Packet* packet)
+{
+	auto p = reinterpret_cast<PacketRegister*>(packet);
+
+	if (std::string(p->username.get()) == "kevinvalk" && std::string(p->password.get()) == "asdasdasd")
+	{
+		std::cout << "Succesfull login for " << p->username.get() << std::endl;
+		client->bellNo = 0;
+		client->bellGlobal = p->global;
+		client->isRegistered = true;
+		bellClients_[client->bellNo].push_back(client);
+
+		// State OK
+		PacketState state(true);
+		client->send(PacketCast state);
+
+
+		return true;
+	}
+	else
+	{
+		std::cout << "Login failed for " << p->username.get() << std::endl;
+		return false;
+	}
 }
 
 void Server::run()
@@ -90,6 +139,15 @@ void Server::run()
 				unsigned int bellNo = k - 0x30;
 				std::cout << "Pressed: " << bellNo << std::endl;
 				isPressed = true;
+
+				if (bellNo == 0)
+				{
+					callGlobal();
+				}
+				else
+				{
+					call(bellNo-1);
+				}
 			}	
 		}
 		#elif RASPBERRY
@@ -100,6 +158,14 @@ void Server::run()
 			{
 				std::cout << "Pressed: " << bellNo << std::endl;
 				isPressed = true;
+				if (bellNo >= 7)
+				{
+					callGlobal();
+				}
+				else
+				{
+					call(bellNo);
+				}
 			}
 		}
 		#endif 

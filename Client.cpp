@@ -3,7 +3,9 @@
 Client::Client(tcp::socket socket)
 	: socket_(std::move(socket))
 {
-
+	bellNo = -1;
+	bellGlobal = false;
+	isRegistered = false;
 }
 
 Client::~Client()
@@ -13,18 +15,16 @@ Client::~Client()
 
 void Client::start()
 {
-	handleOpen();
+	handleOpen(shared_from_this());
 	doReceive();
 }
 
 void Client::stop()
 {
-	// Call the server to release me
-	handleClose();
+	std::cout << "Stopping the client" << std::endl;
 
-	// Cleanup some shared_ptr's
-	handleClose = handleOpen = NULL;
-	handlePacket = NULL;
+	// Call the server to release me
+	handleClose(shared_from_this());
 
 	// Close the socket
 	socket_.close();
@@ -40,7 +40,7 @@ void Client::send(Packet packet)
 	}
 }
 
-void Client::doCall(bool global)
+void Client::call(bool global)
 {
 	std::cout << "Calling this client" << std::endl;
 	PacketCall packetCall(global);
@@ -77,8 +77,7 @@ void Client::handleReceive()
 		{
 			if ( ! ec)
 			{
-				
-				handlePacket(&receive_);
+				handlePacket(self, &receive_);
 
 				// Keep waiting for new stuff
 				doReceive();
@@ -110,6 +109,7 @@ void Client::doSend()
 			}
 			else
 			{
+				std::cerr << "Error: " << ec.message() << std::endl;
 				stop();
 			}
 		}
@@ -117,17 +117,17 @@ void Client::doSend()
 }
 
 // Properties
-void Client::setOpenHandler(std::function<bool()> handler)
+void Client::setOpenHandler(std::function<bool(std::shared_ptr<Client>)> handler)
 {
 	handleOpen = handler;
 }
 
-void Client::setCloseHandler(std::function<bool()> handler)
+void Client::setCloseHandler(std::function<bool(std::shared_ptr<Client>)> handler)
 {
 	handleClose = handler;
 }
 
-void Client::setPacketHandler(std::function<bool(Packet*)> handler)
+void Client::setPacketHandler(std::function<bool(std::shared_ptr<Client>, Packet*)> handler)
 {
 	handlePacket = handler;
 }

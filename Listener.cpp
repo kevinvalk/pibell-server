@@ -1,20 +1,20 @@
 #include "Listener.h"
 
-Listener::Listener(boost::asio::io_service& io_service, const tcp::endpoint& endpoint, std::shared_ptr<Server> server)
-	: acceptor_(io_service, endpoint), socket_(io_service)
+Listener::Listener(boost::asio::io_service& ioService, const tcp::endpoint& endpoint, std::shared_ptr<Server> server)
+	: acceptor_(ioService, endpoint), socket_(ioService)
 {
 	// Store the server
 	server_ = server;
 
 	// Wait for new clients
-	do_accept();
+	doAccept();
 }
 
 Listener::~Listener()
 {
 }
 
-void Listener::do_accept()
+void Listener::doAccept()
 {
 	acceptor_.async_accept(socket_, [this](boost::system::error_code errorCode)
 	{
@@ -25,15 +25,15 @@ void Listener::do_accept()
 			auto client = std::make_shared<Client>(std::move(socket_));
 
 			// Link the open/close/packet handlers to the server
-			client->setOpenHandler(std::bind(&Server::handleOpen, server_, client));
-			client->setCloseHandler(std::bind(&Server::handleClose, server_, client));
-			client->setPacketHandler(std::bind(&Server::handlePacket, server_, client, std::placeholders::_1));
+			client->setOpenHandler(std::bind(&Server::handleOpen, server_, std::placeholders::_1));
+			client->setCloseHandler(std::bind(&Server::handleClose, server_, std::placeholders::_1));
+			client->setPacketHandler(std::bind(&Server::handlePacket, server_, std::placeholders::_1, std::placeholders::_2));
 
 			// Start the client
 			client->start();
 		}
 
 		// Wait for new clients
-		do_accept();
+		doAccept();
 	});
 }

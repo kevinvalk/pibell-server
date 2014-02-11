@@ -7,10 +7,10 @@
 class Listener
 {
 public:
-	Listener(boost::asio::io_service& io_service, const tcp::endpoint& endpoint, std::shared_ptr<Server> server);
+	Listener(boost::asio::io_service& ioService, const tcp::endpoint& endpoint, std::shared_ptr<Server> server);
 	~Listener();
 
-	void do_accept();
+	void doAccept();
 
 private:
 	tcp::acceptor acceptor_;

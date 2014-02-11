@@ -15,6 +15,6 @@ struct Settings
 class Config
 {
 public:
-	static ClientSettings getSettings(const char* filename);
+	static Settings getSettings(const char* filename);
 	static std::string getAbsolutePath(std::string path);
 };
