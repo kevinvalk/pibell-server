@@ -1,0 +1,4 @@
+*.o
+sftp-config.json
+config.ini
+pibell-server*
