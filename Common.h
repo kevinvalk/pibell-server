@@ -17,6 +17,7 @@
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/asio.hpp>
 
+// C++ stuff
 #include <csignal>
 #include <cstdlib>
 #include <cstring>
@@ -25,6 +26,7 @@
 #include <deque>
 #include <thread>
 #include <list>
+#include <functional>
 
 // Usings
 using boost::asio::ip::tcp;

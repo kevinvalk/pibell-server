@@ -7,18 +7,70 @@ Server::Server()
 
 Server::~Server()
 {
+	stop();
 }
 
 void Server::start()
 {
 	// Start main thread
+	isRunning_ = true;
 	thread_ = std::thread(&Server::run, this);
+}
+
+void Server::stop()
+{
+	std::cout << "Closing the server" << std::endl;
+
+	// Wait for our thread to exit
+	isRunning_ = false;
+	thread_.join();
+}
+
+bool Server::handleOpen(std::shared_ptr<Client> client)
+{
+	std::cout << "Handle open" << std::endl;
+	clients_.push_back(client);
+	return true;
+}
+
+bool Server::handleClose(std::shared_ptr<Client> client)
+{
+	std::cout << "Handle close" << std::endl;	
+
+	// Remove the client from our management
+	clients_.remove(client);
+
+	// Remove the client from registered bells
+	for (auto it = bellClients_.cbegin(); it != bellClients_.cend(); ++it)
+	{
+		bellClients_.erase(it);
+	}
+
+	return true;
+}
+
+bool Server::handlePacket(std::shared_ptr<Client> client, Packet* packet)
+{
+	switch (packet->getType())
+	{
+		case PacketType::CALL:
+			std::cout << "Call packet" << std::endl;
+		break;
+		case PacketType::REGISTER:
+			std::cout << "Register packet" << std::endl;
+		break;
+		default:
+			std::cout << "Received unhandeled packet with type: " << packet->getType() << std::endl;
+		break;
+	}
+
+	return true;
 }
 
 void Server::run()
 {
 	// TODO: Nicely cleaning
-	while (true)
+	while (isRunning_)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
@@ -30,45 +82,9 @@ void Server::run()
 				std::cout << "Pressed: " << bellNo << std::endl;
 				std::this_thread::sleep_for(std::chrono::milliseconds(250));
 
-				// 0 == global
-				if (bellNo == 0)
-				{
-					for (auto client : globalBellClients_)
-					{
-						client->doCall(true);
-					}
-				}
-				else
-				{
-					for (auto client : bellClients_[bellNo - 1])
-					{
-						client->doCall(false);
-					}
-				}
+
 			}
 		}
 
 	}
-}
-
-short Server::login(std::shared_ptr<Client> client, std::string name, std::string password, bool global)
-{
-	if (name == "kevinvalk" && password == "asdasdasd")
-	{
-		std::cout << "Client successfully registered" << std::endl;
-		bellClients_[0].push_back(client);
-		if (global)
-			globalBellClients_.push_back(client);
-		return 0;
-	}
-	else
-	{
-		std::cout << "Invalid username/password (" << name << ":" << password << ")"  << std::endl;
-	}
-	return -1;
-}
-
-void Server::add(std::shared_ptr<Client> client)
-{
-	clients_.push_back(std::move(client));
 }

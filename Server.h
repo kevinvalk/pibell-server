@@ -1,6 +1,8 @@
 #pragma once
 
+#include "Common.h"
 #include "Client.h"
+
 
 class Server
 {
@@ -9,16 +11,19 @@ public:
 	~Server();
 
 	void start();
-	void add(std::shared_ptr<Client> client);
-	short login(std::shared_ptr<Client> client, std::string name, std::string password, bool global);
+	void stop();
+
+	// Client handlers
+	bool handleOpen(std::shared_ptr<Client> client);
+	bool handleClose(std::shared_ptr<Client> client);
+	bool handlePacket(std::shared_ptr<Client> client, Packet* packet);
 
 private:
 	void run();
 
+	bool isRunning_;
+
 	std::thread thread_;
 	std::list<std::shared_ptr<Client>> clients_;
-
-	std::list<std::shared_ptr<Client>> globalBellClients_;
 	std::map<unsigned short, std::list<std::shared_ptr<Client>>> bellClients_;
 };
-

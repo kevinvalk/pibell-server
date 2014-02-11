@@ -1,21 +1,33 @@
 #include "Client.h"
-#include "Server.h"
 
-Client::Client(tcp::socket socket, std::shared_ptr<Server> server)
+Client::Client(tcp::socket socket)
 	: socket_(std::move(socket))
 {
-	server_ = server;
+
 }
 
 Client::~Client()
 {
-	std::cout << "Client disconnected" << std::endl;
+	std::cout << "Client destructed!!" << std::endl;
 }
 
 void Client::start()
 {
-	std::cout << "Client connected" << std::endl;
+	handleOpen();
 	doReceive();
+}
+
+void Client::stop()
+{
+	// Call the server to release me
+	handleClose();
+
+	// Cleanup some shared_ptr's
+	handleClose = handleOpen = NULL;
+	handlePacket = NULL;
+
+	// Close the socket
+	socket_.close();
 }
 
 void Client::send(Packet packet)
@@ -49,8 +61,7 @@ void Client::doReceive()
 			}
 			else
 			{
-				// TODO: Cleanup
-				std::cout << "Receive error with code: " << ec.message() << std::endl;
+				stop();
 			}
 		}
 	);
@@ -66,50 +77,25 @@ void Client::handleReceive()
 		{
 			if ( ! ec)
 			{
-				bool success;
-				std::cout << "Reveid packet with type:" << receive_.getType() << std::endl;
-				switch (receive_.getType())
-				{
-					case PacketType::CALL:
-						std::cout << "Receive call packet" << std::endl;
-					break;
-					case PacketType::REGISTER:
-						success = handleRegister();
-					break;
-				}
+				
+				handlePacket(&receive_);
 
 				// Keep waiting for new stuff
 				doReceive();
 			}
 			else
 			{
-				// TODO: Cleanup
-				std::cout << "Handle receive error with code: " << ec << std::endl;
+				stop();
 			}
 		}
 	);
 }
 
-bool Client::handleRegister()
-{
-	auto p = reinterpret_cast<PacketRegister*>(&receive_);
-	std::cout << "Receive register for: " << p->username.get() << ", global: " << p->global << ", bellNo: " << std::endl;
-	
-	PacketState r(false);
-	if (server_->login(shared_from_this(), std::string(p->username.get()), std::string(p->password.get()), p->global) >= 0)
-	{
-		r.state = true;
-	}
-
-	send(PacketCast r);
-
-	return true;
-}
-
 void Client::doSend()
 {
 	auto self(shared_from_this());
-	boost::asio::async_write(socket_,
+	boost::asio::async_write(
+		socket_,
 		boost::asio::buffer(sends_.front().getData(), sends_.front().getTotalLength()),
 		[this, self](boost::system::error_code ec, std::size_t)
 		{
@@ -124,9 +110,24 @@ void Client::doSend()
 			}
 			else
 			{
-				// TODO: Cleanup
-				std::cout << "Send error with code: " << ec << std::endl;
+				stop();
 			}
 		}
 	);
+}
+
+// Properties
+void Client::setOpenHandler(std::function<bool()> handler)
+{
+	handleOpen = handler;
+}
+
+void Client::setCloseHandler(std::function<bool()> handler)
+{
+	handleClose = handler;
+}
+
+void Client::setPacketHandler(std::function<bool(Packet*)> handler)
+{
+	handlePacket = handler;
 }

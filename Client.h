@@ -2,30 +2,34 @@
 
 #include "Common.h"
 
-class Server;
-
 class Client : public std::enable_shared_from_this<Client>
 {
 public:
-	Client(tcp::socket socket, std::shared_ptr<Server> server);
+	Client(tcp::socket socket);
 	~Client();
 
 	void start();
-	void send(Packet packet);
+	void stop();
 
+	void send(Packet packet);
 	void doCall(bool global);
+
+	// Properties
+	void setOpenHandler(std::function<bool()> handler);
+	void setCloseHandler(std::function<bool()> handler);
+	void setPacketHandler(std::function<bool(Packet*)> handler);
 
 private:
 	void doReceive();
-	void handleReceive();
 	void doSend();
-
-	// Handlers
-	bool handleRegister();
+	void handleReceive();
 
 	tcp::socket socket_;
 	Packet receive_;
 	PacketQueue sends_;
 
-	std::shared_ptr<Server> server_;
+	// Open/Close/Receive handlers
+	std::function<bool()> handleOpen;
+	std::function<bool()> handleClose;
+	std::function<bool(Packet*)> handlePacket;
 };

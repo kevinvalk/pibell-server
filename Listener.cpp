@@ -21,12 +21,16 @@ void Listener::do_accept()
 		// If everything ok, then create the new client
 		if ( ! errorCode)
 		{
-			// Create a new client (shared pointer)
-			auto p = std::make_shared<Client>(std::move(socket_), server_);
-			p->start();
+			// Create a client
+			auto client = std::make_shared<Client>(std::move(socket_));
 
-			// Add the client to the server
-			server_->add(p);
+			// Link the open/close/packet handlers to the server
+			client->setOpenHandler(std::bind(&Server::handleOpen, server_, client));
+			client->setCloseHandler(std::bind(&Server::handleClose, server_, client));
+			client->setPacketHandler(std::bind(&Server::handlePacket, server_, client, std::placeholders::_1));
+
+			// Start the client
+			client->start();
 		}
 
 		// Wait for new clients
